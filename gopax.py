@@ -4,18 +4,6 @@ import pandas as pd
 import datetime
 import logging
 
-# 1. 현재 시점의 timestamp를 소수점 없이 밀리세컨드 단위로 구합니다.
-# 2. 다음 문자열들을 연결하여 msg를 생성합니다.
-#       1. 문자열 't'
-#       2.timestamp
-#       3.요청 메서드를 대문자로 (e.g. 'GET')
-#       4.요청 경로 (e.g. '/orders')
-#       5.요청 바디 (바디가 없는 경우는 생략)
-# 3. secret을 base64로 디코딩하여 raw secret을 구합니다.
-# 4. msg를 raw secret으로 SHA512 HMAC 서명하여 raw signature를 생성합니다.
-# 5. raw signature를 base64로 인코딩하여 signature를 구합니다.
-# 6. 요청 헤더에 api-key, timestamp, signature를 추가합니다.
-
 class AutoTrader:
     def __init__(self):
         load_dotenv(verbose=True)
@@ -24,6 +12,20 @@ class AutoTrader:
         self.logger = self.get_logger()
 
     def call(self, need_auth, method, path, body_json=None, recv_window=None):
+        '''
+        1. 현재 시점의 timestamp를 소수점 없이 밀리세컨드 단위로 구합니다.
+        2. 다음 문자열들을 연결하여 msg를 생성합니다.
+            1. 문자열 't'
+            2.timestamp
+            3.요청 메서드를 대문자로 (e.g. 'GET')
+            4.요청 경로 (e.g. '/orders')
+            5.요청 바디 (바디가 없는 경우는 생략)
+        3. secret을 base64로 디코딩하여 raw secret을 구합니다.
+        4. msg를 raw secret으로 SHA512 HMAC 서명하여 raw signature를 생성합니다.
+        5. raw signature를 base64로 인코딩하여 signature를 구합니다.
+        6. 요청 헤더에 api-key, timestamp, signature를 추가합니다.
+        '''
+
         method = method.upper()
         if need_auth:
             timestamp = str(int(time.time() * 1000))
@@ -117,7 +119,7 @@ class AutoTrader:
         today = df.iloc[-1]
         yesterday = df.iloc[-2]
 
-        target = today['Open'] + (yesterday['High'] - yesterday['Low']) * 0.5
+        target = today['Open'] + (yesterday['High'] - yesterday['Low']) * 0.2
         return target
 
     def buy_crypto(self, currency):
@@ -184,8 +186,6 @@ class AutoTrader:
 
 
     def auto_trade(self, currency):
-
-
         now = datetime.datetime.now()
         base = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(hours=6) + datetime.timedelta(1)
         
