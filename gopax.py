@@ -21,7 +21,8 @@ class AutoTrader:
         load_dotenv(verbose=True)
         self.API_KEY = os.getenv('API_KEY')
         self.SECRET = os.getenv('SECRET')
-    
+        self.logger = self.get_logger()
+
     def call(self, need_auth, method, path, body_json=None, recv_window=None):
         method = method.upper()
         if need_auth:
@@ -102,7 +103,7 @@ class AutoTrader:
         res = self.call(False, 'GET', url)
         df = pd.DataFrame(res['body'])
         df.columns = ["Date", "Low", "High", "Open", "Close", "Volume"]
-        print(df)
+        self.logger.info(df)
 
         #   [
         #     1601032200000,  # 구간 시작 시간
@@ -158,7 +159,7 @@ class AutoTrader:
         close = df['Close']
         ma = close.rolling(window=5).mean()
         return ma[4]
-        
+
     def get_logger(self):
         my_logger = logging.getLogger('logger')
         my_logger.setLevel(logging.DEBUG)
@@ -184,7 +185,6 @@ class AutoTrader:
 
     def auto_trade(self, currency):
 
-        logger = self.get_logger()
 
         now = datetime.datetime.now()
         base = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(hours=6) + datetime.timedelta(1)
@@ -193,8 +193,8 @@ class AutoTrader:
         ma5 = self.get_yesterday_ma5(currency)
         current_price = self.get_current_price(currency)
 
-        logger.info(f'target : {target_price}')
-        logger.info(f'ma5 : {ma5}')
+        self.logger.info(f'target : {target_price}')
+        self.logger.info(f'ma5 : {ma5}')
 
         sec = 0
         while True:
@@ -204,21 +204,21 @@ class AutoTrader:
                     target_price = self.get_target_price(currency)
                     ma5 = self.get_yesterday_ma5(currency)
                     base = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(hours=6) + datetime.timedelta(1)
-                    logger.info(f'Sell {currency} at {current_price}')
-                    logger.info(f'====================================')
-                    logger.info(f'new target : {target_price}')
-                    logger.info(f'new ma5 : {ma5}')
+                    self.logger.info(f'Sell {currency} at {current_price}')
+                    self.logger.info(f'====================================')
+                    self.logger.info(f'new target : {target_price}')
+                    self.logger.info(f'new ma5 : {ma5}')
                     self.sell_crypto(currency)
 
                 current_price = self.get_current_price(currency)
                 if (current_price > target_price) and (current_price > ma5):
-                    logger.info(f'Buy {currency} at {current_price}')
+                    self.logger.info(f'Buy {currency} at {current_price}')
                     self.buy_crypto(currency)
                 if sec % 1800 == 0:
-                    logger.info(f'current {currency} price : {current_price}')
+                    self.logger.info(f'current {currency} price : {current_price}')
                     sec = 0
             except:
-                logger.error("unexpected error")
+                self.logger.error("unexpected error")
 
             time.sleep(1)
             sec += 1
