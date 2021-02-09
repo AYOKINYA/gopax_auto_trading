@@ -2,6 +2,7 @@ import base64, hashlib, hmac, json, requests, time, os
 from dotenv import load_dotenv
 import pandas as pd
 import datetime
+import logging
 
 # 1. 현재 시점의 timestamp를 소수점 없이 밀리세컨드 단위로 구합니다.
 # 2. 다음 문자열들을 연결하여 msg를 생성합니다.
@@ -68,7 +69,6 @@ class AutoTrader:
             'side': 'buy', 'type': 'limit', 'amount': unit,
             'price': price, 'tradingPairName': f'{currency}-KRW'
             }
-
         return self.call(True, 'POST', '/orders', post_orders_req_body, 200)
 
     def sell_order(self, currency, unit):
@@ -76,7 +76,6 @@ class AutoTrader:
             'side': 'sell', 'type': 'market', 'amount': unit,
             'tradingPairName': f'{currency}-KRW'
             }
-
         return self.call(True, 'POST', '/orders', post_orders_req_body, 200)
 
     def get_order_book(self, currency):
@@ -159,34 +158,73 @@ class AutoTrader:
         close = df['Close']
         ma = close.rolling(window=5).mean()
         return ma[4]
+        
+    def get_logger(self):
+        my_logger = logging.getLogger('logger')
+        my_logger.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter('[%(asctime)s] %(message)s')
+
+        stream_handler = logging.StreamHandler()
+        file_handler = logging.FileHandler(filename="trade.log")
+
+        stream_handler.setLevel(logging.INFO)
+        file_handler.setLevel(logging.DEBUG)
+
+        stream_handler.setFormatter(formatter)
+        file_handler.setFormatter(formatter)
+
+        my_logger.propagate = False
+        
+        my_logger.addHandler(stream_handler)
+        my_logger.addHandler(file_handler)
+
+        return my_logger
+
 
     def auto_trade(self, currency):
+
+        logger = self.get_logger()
+
         now = datetime.datetime.now()
         base = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(hours=6) + datetime.timedelta(1)
+        
         target_price = self.get_target_price(currency)
-        print(f'target : {target_price}')
         ma5 = self.get_yesterday_ma5(currency)
-        print(f'ma5 : {ma5}')
         current_price = self.get_current_price(currency)
-        print(f'current price : {current_price}')
 
+        logger.info(f'target : {target_price}')
+        logger.info(f'ma5 : {ma5}')
+
+        sec = 0
         while True:
             try:
                 now = datetime.datetime.now()
                 if base < now < base + datetime.timedelta(seconds=10):
                     target_price = self.get_target_price(currency)
+                    ma5 = self.get_yesterday_ma5(currency)
                     base = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(hours=6) + datetime.timedelta(1)
+                    logger.info(f'Sell {currency} at {current_price}')
+                    logger.info(f'====================================')
+                    logger.info(f'new target : {target_price}')
+                    logger.info(f'new ma5 : {ma5}')
                     self.sell_crypto(currency)
 
                 current_price = self.get_current_price(currency)
                 if (current_price > target_price) and (current_price > ma5):
+                    logger.info(f'Buy {currency} at {current_price}')
                     self.buy_crypto(currency)
-                print(f'current_price : {current_price}')
+                if sec % 1800 == 0:
+                    logger.info(f'current {currency} price : {current_price}')
+                    sec = 0
             except:
-                print ("Error")
+                logger.error("unexpected error")
 
             time.sleep(1)
+            sec += 1
 
 if __name__ == "__main__":
     autotrader = AutoTrader()
     autotrader.auto_trade('ETH')
+    #autotrader.auto_trade('BTC')
+    
