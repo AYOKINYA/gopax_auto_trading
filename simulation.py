@@ -91,7 +91,7 @@ if __name__ == "__main__":
     simulation = Simulator()
     # simulation.get_data('BTC', 30)
 
-    for k in np.arange(0.1, 1.0, 0.1):
+    for k in np.arange(0.1, 0.3, 0.01):
         ror = simulation.get_ror('ETH', k, 365)
-        print( "%.1f %f" % (k, ror))
+        print( "%.2f %f" % (k, ror))
         time.sleep(1)

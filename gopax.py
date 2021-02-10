@@ -121,14 +121,14 @@ class AutoTrader:
         today = df.iloc[-1]
         yesterday = df.iloc[-2]
 
-        target = today['Open'] + (yesterday['High'] - yesterday['Low']) * 0.2
+        target = today['Open'] + (yesterday['High'] - yesterday['Low']) * 0.18
         return target
 
     def buy_crypto(self, currency):
         orderbook = self.get_order_book(currency)
         sell_price = orderbook['body']['bid'][0][1]
         KRW = self.get_current_balance('KRW')
-        if KRW == 0:
+        if KRW < 1000:
             self.logger.info("Not Enough KRW")
             return None
         unit = KRW / float(sell_price)
@@ -204,6 +204,7 @@ class AutoTrader:
         self.logger.info(f'ma5 : {ma5}')
 
         sec = 0
+        buy = 1
         while True:
             try:
                 now = datetime.datetime.now()
@@ -216,16 +217,21 @@ class AutoTrader:
                     self.logger.info(f'new target : {target_price}')
                     self.logger.info(f'new ma5 : {ma5}')
                     self.sell_crypto(currency)
+                    buy = 1
 
                 current_price = self.get_current_price(currency)
-                if (current_price > target_price) and (current_price > ma5):
+                if buy and (current_price > target_price) and (current_price > ma5):
                     self.logger.info(f'Buy {currency} at {current_price}')
                     self.buy_crypto(currency)
+                    KRW = self.get_current_balance('KRW')
+                    if (KRW < 1000):
+                        buy = 0
+
                 if sec % 1800 == 0:
                     self.logger.info(f'current {currency} price : {current_price}')
                     sec = 0
-            except:
-                self.logger.error("unexpected error")
+            except Exception as e:
+                self.logger.error(e)
 
             time.sleep(1)
             sec += 1
