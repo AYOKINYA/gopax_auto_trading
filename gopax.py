@@ -72,7 +72,9 @@ class AutoTrader:
             'side': 'buy', 'type': 'limit', 'amount': unit,
             'price': price, 'tradingPairName': f'{currency}-KRW'
             }
-        return self.call(True, 'POST', '/orders', post_orders_req_body, 200)
+        res = self.call(True, 'POST', '/orders', post_orders_req_body, 200)
+        self.logger.info(res)
+        return res
 
     def sell_order(self, currency, unit):
         post_orders_req_body = {
@@ -127,7 +129,7 @@ class AutoTrader:
         sell_price = orderbook['body']['bid'][0][1]
         KRW = self.get_current_balance('KRW')
         if KRW == 0:
-            print("Not Enough KRW")
+            self.logger.info("Not Enough KRW")
             return None
         unit = KRW / float(sell_price)
         print(unit)
@@ -135,7 +137,12 @@ class AutoTrader:
 
     def sell_crypto(self, currency):
         unit = self.get_current_balance(currency)
-        return self.sell_order(currency, unit)
+        if unit == 0:
+            self.logger.info("No Unit To Sell")
+            return None
+        res = self.sell_order(currency, unit)
+        self.logger.info(res)
+        return res
 
     def get_yesterday_ma5(self, currency):
         # end = now, start = now - 24hrs * 6
@@ -204,7 +211,7 @@ class AutoTrader:
                     target_price = self.get_target_price(currency)
                     ma5 = self.get_yesterday_ma5(currency)
                     base = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(hours=6) + datetime.timedelta(1)
-                    self.logger.info(f'Sell {currency} at {current_price}')
+                    self.logger.info(f'Try to Sell {currency} at {current_price}')
                     self.logger.info(f'====================================')
                     self.logger.info(f'new target : {target_price}')
                     self.logger.info(f'new ma5 : {ma5}')
@@ -227,4 +234,5 @@ if __name__ == "__main__":
     autotrader = AutoTrader()
     autotrader.auto_trade('ETH')
     #autotrader.auto_trade('BTC')
+
     
